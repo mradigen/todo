@@ -31,9 +31,20 @@ EOF
 _list() {
 	i=1
 	while read -r line; do
-		if echo "$line" | grep -q '^;'; then
-			echo "${i}${d} \e[9m${line:1}\e[0m"
+		if echo "$line" | grep -q '^- \[x\]'; then
+			# Completed task (- [x] Task)
+			task_text=$(echo "$line" | sed 's/^- \[x\] //')
+			echo "${i}${d} \e[9m${task_text}\e[0m"
+		elif echo "$line" | grep -q '^- \[ \]'; then
+			# Uncompleted task (- [ ] Task)
+			task_text=$(echo "$line" | sed 's/^- \[ \] //')
+			echo "${i}${d} \e[1m${task_text}\e[0m"
+		elif echo "$line" | grep -q '^- '; then
+			# Simple list item without checkbox (- Task)
+			task_text=$(echo "$line" | sed 's/^- //')
+			echo "${i}${d} \e[1m${task_text}\e[0m"
 		else
+			# Plain text, treat as uncompleted task
 			echo "${i}${d} \e[1m${line}\e[0m"
 		fi
 		i=$((i + 1))
@@ -41,7 +52,7 @@ _list() {
 }
 
 _add() {
-	echo "$@" >> $TODO_FILE
+	echo "- [ ] $@" >> $TODO_FILE
 }
 
 _rm() {
@@ -49,18 +60,28 @@ _rm() {
 }
 
 _done() {
-	#sed -n "${1}p" $TODO_FILE | grep -q '^;'
-	#if [ $? -eq 0 ]; then
-	if [ -n "`sed -n "${1}p" .todo | grep '^;'`" ]; then
+	if [ -n "$(sed -n "${1}p" $TODO_FILE | grep '^- \[x\]')" ]; then
 		echo "Task already done."
 		exit 1
 	else
-		sed -i "${1}s/^/;/" $TODO_FILE
+		# Replace "- [ ]" with "- [x]" or add "- [x] " if its a plain task
+		line=$(sed -n "${1}p" $TODO_FILE)
+		if echo "$line" | grep -q '^- \[ \]'; then
+			# Replace checkbox
+			sed -i "${1}s/- \[ \]/- \[x\]/" $TODO_FILE
+		elif echo "$line" | grep -q '^- '; then
+			# Replace simple list item
+			task_text=$(echo "$line" | sed 's/^- //')
+			sed -i "${1}c\- \[x\] ${task_text}" $TODO_FILE
+		else
+			# Plain text
+			sed -i "${1}c\- \[x\] ${line}" $TODO_FILE
+		fi
 	fi
 }
 
 _clean() {
-	sed -i '/^;/d' $TODO_FILE
+	sed -i '/^\- \[x\]/d' $TODO_FILE
 }
 
 _clear() {

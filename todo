@@ -6,7 +6,7 @@
 #   - none :)
 # ~ ADIGEN
 
-TODO_FILE="$HOME/.todo"
+TODO_FILE="$HOME/.todo.md"
 d='.' # Delimiter between number and task
 alias echo="echo -e"
 
